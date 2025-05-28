@@ -14,7 +14,8 @@ import {
   Star,
   StarOff,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
