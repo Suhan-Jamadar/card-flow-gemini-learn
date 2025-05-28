@@ -19,12 +19,80 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
   const [isGenerating, setIsGenerating] = useState(false);
   const { addFlashcardSet } = useFlashcards();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
     if (uploadedFile) {
       setFile(uploadedFile);
-      setTextInput(''); // Clear text input if file is uploaded
+      setTextInput('');
+      
+      // Process the file content
+      try {
+        const text = await extractTextFromFile(uploadedFile);
+        setTextInput(text);
+        toast({
+          title: "File Processed",
+          description: `Successfully extracted text from ${uploadedFile.name}`,
+        });
+      } catch (error) {
+        toast({
+          title: "File Processing Error",
+          description: "Failed to extract text from the file. Please try a different file.",
+          variant: "destructive"
+        });
+        setFile(null);
+      }
     }
+  };
+
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        if (text && text.trim()) {
+          resolve(text);
+        } else {
+          reject(new Error('No text content found'));
+        }
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      
+      // For now, we'll treat all files as text files
+      // In a real implementation, you'd use different parsers for PDF, DOCX, etc.
+      reader.readAsText(file);
+    });
+  };
+
+  const generateFlashcardsFromText = (text: string) => {
+    // Simple flashcard generation from text
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const flashcards = [];
+    
+    for (let i = 0; i < Math.min(sentences.length, 10); i += 2) {
+      if (sentences[i] && sentences[i + 1]) {
+        flashcards.push({
+          question: sentences[i].trim() + '?',
+          answer: sentences[i + 1].trim()
+        });
+      }
+    }
+    
+    // If we don't have enough content, create some sample cards
+    if (flashcards.length === 0) {
+      const words = text.split(' ').filter(w => w.length > 3);
+      const uniqueWords = [...new Set(words)].slice(0, 5);
+      
+      uniqueWords.forEach(word => {
+        flashcards.push({
+          question: `What does "${word}" mean?`,
+          answer: `Define or explain: ${word}`
+        });
+      });
+    }
+    
+    return flashcards;
   };
 
   const generateFlashcards = async () => {
@@ -49,26 +117,26 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
     setIsGenerating(true);
 
     try {
-      // Simulate flashcard generation (replace with actual Gemini API call)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Mock generated flashcards
-      const mockFlashcards = [
-        { question: "What is React?", answer: "A JavaScript library for building user interfaces" },
-        { question: "What is a component?", answer: "A reusable piece of UI that can contain state and props" },
-        { question: "What is JSX?", answer: "A syntax extension for JavaScript that looks similar to XML or HTML" },
-      ];
+      const generatedFlashcards = textInput.trim() 
+        ? generateFlashcardsFromText(textInput)
+        : [];
+
+      if (generatedFlashcards.length === 0) {
+        throw new Error('No flashcards could be generated from the provided content');
+      }
 
       addFlashcardSet({
         name: setName,
-        cards: mockFlashcards,
+        cards: generatedFlashcards,
         priority: 'medium',
         isRead: false
       });
 
       toast({
         title: "Flashcards Generated!",
-        description: `Successfully created ${mockFlashcards.length} flashcards for "${setName}".`,
+        description: `Successfully created ${generatedFlashcards.length} flashcards for "${setName}".`,
       });
 
       onClose();
@@ -121,27 +189,6 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
               </Label>
               <div className="mt-2 space-y-4">
                 <div>
-                  <Label htmlFor="textInput" className="text-sm text-gray-600 dark:text-gray-400">
-                    Text Input
-                  </Label>
-                  <Textarea
-                    id="textInput"
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    placeholder="Paste your text content here..."
-                    rows={6}
-                    className="mt-1"
-                    disabled={!!file}
-                  />
-                </div>
-
-                <div className="flex items-center justify-center">
-                  <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm rounded-full">
-                    OR
-                  </span>
-                </div>
-
-                <div>
                   <Label htmlFor="fileUpload" className="text-sm text-gray-600 dark:text-gray-400">
                     Upload Document
                   </Label>
@@ -160,7 +207,6 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
                             className="sr-only"
                             accept=".pdf,.docx,.txt"
                             onChange={handleFileUpload}
-                            disabled={!!textInput.trim()}
                           />
                         </label>
                         <p className="pl-1">or drag and drop</p>
@@ -176,6 +222,26 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
                       {file.name}
                     </div>
                   )}
+                </div>
+
+                <div className="flex items-center justify-center">
+                  <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm rounded-full">
+                    OR
+                  </span>
+                </div>
+
+                <div>
+                  <Label htmlFor="textInput" className="text-sm text-gray-600 dark:text-gray-400">
+                    Text Input
+                  </Label>
+                  <Textarea
+                    id="textInput"
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder="Paste your text content here..."
+                    rows={6}
+                    className="mt-1"
+                  />
                 </div>
               </div>
             </div>

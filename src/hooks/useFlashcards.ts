@@ -1,12 +1,15 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FlashcardSet, Flashcard } from '@/types/flashcard';
+import { SortOption, FilterOption } from '@/components/SearchAndFilter';
 
 const STORAGE_KEY = 'flashcards-pro-data';
 
 export const useFlashcards = () => {
   const [flashcards, setFlashcards] = useState<FlashcardSet[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
 
   // Load flashcards from localStorage on mount
   useEffect(() => {
@@ -49,19 +52,82 @@ export const useFlashcards = () => {
     setFlashcards(prev => prev.filter(set => set.id !== id));
   };
 
-  const filteredFlashcards = flashcards.filter(set =>
-    set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    set.cards.some(card => 
-      card.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      card.answer.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  // Group flashcards by name
+  const groupedFlashcards = useMemo(() => {
+    const groups: { [key: string]: FlashcardSet[] } = {};
+    
+    flashcards.forEach(set => {
+      const groupKey = set.name.toLowerCase().trim();
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(set);
+    });
+
+    return groups;
+  }, [flashcards]);
+
+  // Apply filters and sorting
+  const filteredAndSortedFlashcards = useMemo(() => {
+    let filtered = flashcards;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(set =>
+        set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        set.cards.some(card => 
+          card.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          card.answer.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Apply status/priority filter
+    if (filterBy !== 'all') {
+      filtered = filtered.filter(set => {
+        switch (filterBy) {
+          case 'read': return set.isRead;
+          case 'unread': return !set.isRead;
+          case 'high': return set.priority === 'high';
+          case 'medium': return set.priority === 'medium';
+          case 'low': return set.priority === 'low';
+          default: return true;
+        }
+      });
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'date-asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'date-desc':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [flashcards, searchTerm, filterBy, sortBy]);
 
   return {
     flashcards,
     searchTerm,
     setSearchTerm,
-    filteredFlashcards,
+    sortBy,
+    setSortBy,
+    filterBy,
+    setFilterBy,
+    filteredFlashcards: filteredAndSortedFlashcards,
+    groupedFlashcards,
     addFlashcardSet,
     updateFlashcardSet,
     removeFlashcardSet,

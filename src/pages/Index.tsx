@@ -2,16 +2,28 @@
 import React, { useState } from 'react';
 import { FlashcardGenerator } from '@/components/FlashcardGenerator';
 import { FlashcardDisplay } from '@/components/FlashcardDisplay';
+import { GroupedFlashcardDisplay } from '@/components/GroupedFlashcardDisplay';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
 import { useFlashcards } from '@/hooks/useFlashcards';
 import { useDarkMode } from '@/hooks/useDarkMode';
-import { Plus, Moon, Sun } from 'lucide-react';
+import { Plus, Moon, Sun, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Index = () => {
   const [showGenerator, setShowGenerator] = useState(false);
-  const { flashcards, searchTerm, setSearchTerm, filteredFlashcards } = useFlashcards();
+  const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
+  const { 
+    flashcards, 
+    searchTerm, 
+    setSearchTerm, 
+    sortBy, 
+    setSortBy, 
+    filterBy, 
+    setFilterBy,
+    filteredFlashcards,
+    groupedFlashcards
+  } = useFlashcards();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   const highPriorityFlashcards = filteredFlashcards.filter(card => card.priority === 'high');
@@ -27,10 +39,19 @@ const Index = () => {
               FlashCards Pro
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Smart learning made simple
+              Smart learning made simple • {flashcards.length} total sets
             </p>
           </div>
           <div className="flex gap-3">
+            <Button
+              onClick={() => setViewMode(viewMode === 'list' ? 'grouped' : 'list')}
+              variant="outline"
+              size="icon"
+              className="border-gray-200 dark:border-gray-700"
+              title={viewMode === 'list' ? 'Switch to grouped view' : 'Switch to list view'}
+            >
+              {viewMode === 'list' ? <Grid className="h-5 w-5" /> : <List className="h-5 w-5" />}
+            </Button>
             <Button
               onClick={toggleDarkMode}
               variant="outline"
@@ -53,27 +74,37 @@ const Index = () => {
         <SearchAndFilter 
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          filterBy={filterBy}
+          setFilterBy={setFilterBy}
         />
 
-        {/* Flashcard Display */}
-        <Tabs defaultValue="all" className="mt-8">
-          <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-            <TabsTrigger value="all" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
-              All Cards ({regularFlashcards.length})
-            </TabsTrigger>
-            <TabsTrigger value="priority" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
-              High Priority ({highPriorityFlashcards.length})
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all" className="mt-6">
-            <FlashcardDisplay flashcards={regularFlashcards} />
-          </TabsContent>
-          
-          <TabsContent value="priority" className="mt-6">
-            <FlashcardDisplay flashcards={highPriorityFlashcards} />
-          </TabsContent>
-        </Tabs>
+        {/* View Toggle and Flashcard Display */}
+        <div className="mt-8">
+          {viewMode === 'grouped' ? (
+            <GroupedFlashcardDisplay groupedFlashcards={groupedFlashcards} />
+          ) : (
+            <Tabs defaultValue="all">
+              <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <TabsTrigger value="all" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+                  All Cards ({regularFlashcards.length})
+                </TabsTrigger>
+                <TabsTrigger value="priority" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+                  High Priority ({highPriorityFlashcards.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="all" className="mt-6">
+                <FlashcardDisplay flashcards={regularFlashcards} />
+              </TabsContent>
+              
+              <TabsContent value="priority" className="mt-6">
+                <FlashcardDisplay flashcards={highPriorityFlashcards} />
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
 
         {/* Generator Modal */}
         {showGenerator && (
