@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useFlashcards } from '@/hooks/useFlashcards';
 import { X, Upload, FileText, Wand2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -16,6 +17,7 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
   const [setName, setSetName] = useState('');
   const [textInput, setTextInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [isGenerating, setIsGenerating] = useState(false);
   const { addFlashcardSet } = useFlashcards();
 
@@ -23,24 +25,67 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
     const uploadedFile = event.target.files?.[0];
     if (uploadedFile) {
       setFile(uploadedFile);
+      // Clear text input when file is uploaded
       setTextInput('');
       
-      // Process the file content
-      try {
-        const text = await extractTextFromFile(uploadedFile);
-        setTextInput(text);
-        toast({
-          title: "File Processed",
-          description: `Successfully extracted text from ${uploadedFile.name}`,
-        });
-      } catch (error) {
-        toast({
-          title: "File Processing Error",
-          description: "Failed to extract text from the file. Please try a different file.",
-          variant: "destructive"
-        });
-        setFile(null);
+      toast({
+        title: "File Uploaded",
+        description: `${uploadedFile.name} is ready for processing.`,
+      });
+    }
+  };
+
+  const generateFlashcardsWithGemini = async (content: string) => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Gemini API key not found. Please add VITE_GEMINI_API_KEY to your environment variables.');
+    }
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Create flashcards from the following content. Generate 5-10 flashcards with clear questions and concise answers. Format the response as a JSON array with objects containing "question" and "answer" fields. Content: ${content}`
+          }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!generatedText) {
+      throw new Error('No content generated from Gemini API');
+    }
+
+    // Extract JSON from the response
+    const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      // Fallback: parse the text manually
+      const lines = generatedText.split('\n').filter(line => line.trim());
+      const flashcards = [];
+      
+      for (let i = 0; i < lines.length - 1; i += 2) {
+        if (lines[i] && lines[i + 1]) {
+          flashcards.push({
+            question: lines[i].replace(/^\d+\.\s*/, '').trim(),
+            answer: lines[i + 1].trim()
+          });
+        }
       }
+      
+      return flashcards;
     }
   };
 
@@ -58,41 +103,8 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
       };
       
       reader.onerror = () => reject(new Error('Failed to read file'));
-      
-      // For now, we'll treat all files as text files
-      // In a real implementation, you'd use different parsers for PDF, DOCX, etc.
       reader.readAsText(file);
     });
-  };
-
-  const generateFlashcardsFromText = (text: string) => {
-    // Simple flashcard generation from text
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const flashcards = [];
-    
-    for (let i = 0; i < Math.min(sentences.length, 10); i += 2) {
-      if (sentences[i] && sentences[i + 1]) {
-        flashcards.push({
-          question: sentences[i].trim() + '?',
-          answer: sentences[i + 1].trim()
-        });
-      }
-    }
-    
-    // If we don't have enough content, create some sample cards
-    if (flashcards.length === 0) {
-      const words = text.split(' ').filter(w => w.length > 3);
-      const uniqueWords = [...new Set(words)].slice(0, 5);
-      
-      uniqueWords.forEach(word => {
-        flashcards.push({
-          question: `What does "${word}" mean?`,
-          answer: `Define or explain: ${word}`
-        });
-      });
-    }
-    
-    return flashcards;
   };
 
   const generateFlashcards = async () => {
@@ -117,20 +129,28 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
     setIsGenerating(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      let content = textInput.trim();
       
-      const generatedFlashcards = textInput.trim() 
-        ? generateFlashcardsFromText(textInput)
-        : [];
+      // If file is uploaded, extract text from it
+      if (file) {
+        content = await extractTextFromFile(file);
+      }
 
-      if (generatedFlashcards.length === 0) {
+      if (!content) {
+        throw new Error('No content to process');
+      }
+
+      // Generate flashcards using Gemini API
+      const generatedFlashcards = await generateFlashcardsWithGemini(content);
+
+      if (!generatedFlashcards || generatedFlashcards.length === 0) {
         throw new Error('No flashcards could be generated from the provided content');
       }
 
       addFlashcardSet({
         name: setName,
         cards: generatedFlashcards,
-        priority: 'medium',
+        priority: priority,
         isRead: false
       });
 
@@ -141,9 +161,10 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
 
       onClose();
     } catch (error) {
+      console.error('Generation error:', error);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate flashcards. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate flashcards. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -185,6 +206,26 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
 
             <div>
               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Priority Level
+              </Label>
+              <RadioGroup value={priority} onValueChange={(value: 'low' | 'medium' | 'high') => setPriority(value)} className="mt-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="low" id="low" />
+                  <Label htmlFor="low" className="text-sm text-green-600 dark:text-green-400">Low Priority</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="medium" id="medium" />
+                  <Label htmlFor="medium" className="text-sm text-yellow-600 dark:text-yellow-400">Medium Priority</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="high" id="high" />
+                  <Label htmlFor="high" className="text-sm text-red-600 dark:text-red-400">High Priority</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Content Source
               </Label>
               <div className="mt-2 space-y-4">
@@ -220,29 +261,41 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
                     <div className="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <FileText className="h-4 w-4 mr-2" />
                       {file.name}
+                      <Button
+                        onClick={() => setFile(null)}
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </Button>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-center">
-                  <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm rounded-full">
-                    OR
-                  </span>
-                </div>
+                {!file && (
+                  <>
+                    <div className="flex items-center justify-center">
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm rounded-full">
+                        OR
+                      </span>
+                    </div>
 
-                <div>
-                  <Label htmlFor="textInput" className="text-sm text-gray-600 dark:text-gray-400">
-                    Text Input
-                  </Label>
-                  <Textarea
-                    id="textInput"
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    placeholder="Paste your text content here..."
-                    rows={6}
-                    className="mt-1"
-                  />
-                </div>
+                    <div>
+                      <Label htmlFor="textInput" className="text-sm text-gray-600 dark:text-gray-400">
+                        Text Input
+                      </Label>
+                      <Textarea
+                        id="textInput"
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        placeholder="Paste your text content here..."
+                        rows={6}
+                        className="mt-1"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

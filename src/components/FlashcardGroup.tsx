@@ -12,7 +12,9 @@ import {
   EyeOff, 
   Flag, 
   Star,
-  StarOff
+  StarOff,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -47,15 +49,16 @@ export const FlashcardGroup: React.FC<FlashcardGroupProps> = ({ flashcardSet }) 
   };
 
   const handleDownload = () => {
-    const content = flashcardSet.cards
-      .map((card, index) => `${index + 1}. Q: ${card.question}\nA: ${card.answer}\n`)
-      .join('\n');
+    const content = `Flashcard Set: ${flashcardSet.name}\nCreated: ${new Date(flashcardSet.createdAt).toLocaleDateString()}\nPriority: ${flashcardSet.priority}\nTotal Cards: ${flashcardSet.cards.length}\n\n` +
+      flashcardSet.cards
+        .map((card, index) => `Card ${index + 1}:\nQ: ${card.question}\nA: ${card.answer}\n`)
+        .join('\n');
     
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${flashcardSet.name}.txt`;
+    a.download = `${flashcardSet.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_flashcards.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -64,6 +67,14 @@ export const FlashcardGroup: React.FC<FlashcardGroupProps> = ({ flashcardSet }) 
     toast({
       title: "Download Started",
       description: `"${flashcardSet.name}" flashcards downloaded.`,
+    });
+  };
+
+  const handleDelete = () => {
+    removeFlashcardSet(flashcardSet.id);
+    toast({
+      title: "Flashcard Set Deleted",
+      description: `"${flashcardSet.name}" has been removed.`,
     });
   };
 
@@ -80,17 +91,24 @@ export const FlashcardGroup: React.FC<FlashcardGroupProps> = ({ flashcardSet }) 
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 flex-1">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-left flex-1 group"
+              className="flex items-center space-x-2 text-left group"
             >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {flashcardSet.name}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {flashcardSet.cards.length} cards • Created {new Date(flashcardSet.createdAt).toLocaleDateString()}
-              </p>
+              {isExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+              )}
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {flashcardSet.name}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {flashcardSet.cards.length} cards • Created {new Date(flashcardSet.createdAt).toLocaleDateString()}
+                </p>
+              </div>
             </button>
             
             <div className="flex items-center space-x-2">
@@ -105,44 +123,56 @@ export const FlashcardGroup: React.FC<FlashcardGroupProps> = ({ flashcardSet }) 
             </div>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleToggleRead}>
-                {flashcardSet.isRead ? (
-                  <>
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    Mark as Unread
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Mark as Read
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
-                <Flag className="h-4 w-4 mr-2 text-red-500" />
-                High Priority
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
-                <Star className="h-4 w-4 mr-2 text-yellow-500" />
-                Medium Priority
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
-                <StarOff className="h-4 w-4 mr-2 text-green-500" />
-                Low Priority
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleDownload}
+              variant="outline"
+              size="sm"
+              className="border-gray-200 dark:border-gray-700"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Download
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleToggleRead}>
+                  {flashcardSet.isRead ? (
+                    <>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Mark as Unread
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Mark as Read
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
+                  <Flag className="h-4 w-4 mr-2 text-red-500" />
+                  High Priority
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
+                  <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                  Medium Priority
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
+                  <StarOff className="h-4 w-4 mr-2 text-green-500" />
+                  Low Priority
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
+                  <X className="h-4 w-4 mr-2" />
+                  Delete Set
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
