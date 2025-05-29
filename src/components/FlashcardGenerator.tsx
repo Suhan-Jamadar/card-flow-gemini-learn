@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useFlashcards } from '@/hooks/useFlashcards';
-import { X, Upload, FileText, Wand2 } from 'lucide-react';
+import { X, Upload, FileText, Wand2, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface FlashcardGeneratorProps {
@@ -25,7 +24,6 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
     const uploadedFile = event.target.files?.[0];
     if (uploadedFile) {
       setFile(uploadedFile);
-      // Clear text input when file is uploaded
       setTextInput('');
       
       toast({
@@ -42,6 +40,8 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
       throw new Error('Gemini API key not found. Please add VITE_GEMINI_API_KEY to your environment variables.');
     }
 
+    console.log('Making request to Gemini API with content length:', content.length);
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
@@ -50,42 +50,70 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Create flashcards from the following content. Generate 5-10 flashcards with clear questions and concise answers. Format the response as a JSON array with objects containing "question" and "answer" fields. Content: ${content}`
+            text: `Create flashcards from the following content. Generate 5-10 flashcards with clear questions and concise answers. Format the response as a JSON array with objects containing "question" and "answer" fields. Make sure the JSON is valid and properly formatted. 
+
+Content: ${content}`
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
       })
     });
 
+    console.log('Gemini API response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Gemini API error response:', errorText);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('Gemini API response data:', data);
+    
     const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!generatedText) {
       throw new Error('No content generated from Gemini API');
     }
 
+    console.log('Generated text:', generatedText);
+
     // Extract JSON from the response
-    const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    } else {
-      // Fallback: parse the text manually
-      const lines = generatedText.split('\n').filter(line => line.trim());
-      const flashcards = [];
-      
-      for (let i = 0; i < lines.length - 1; i += 2) {
-        if (lines[i] && lines[i + 1]) {
-          flashcards.push({
-            question: lines[i].replace(/^\d+\.\s*/, '').trim(),
-            answer: lines[i + 1].trim()
-          });
+    try {
+      const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const flashcards = JSON.parse(jsonMatch[0]);
+        console.log('Parsed flashcards:', flashcards);
+        return flashcards;
+      } else {
+        // Fallback: try to parse the entire response as JSON
+        try {
+          return JSON.parse(generatedText);
+        } catch {
+          // Manual parsing fallback
+          const lines = generatedText.split('\n').filter(line => line.trim());
+          const flashcards = [];
+          
+          for (let i = 0; i < lines.length - 1; i += 2) {
+            if (lines[i] && lines[i + 1]) {
+              flashcards.push({
+                question: lines[i].replace(/^\d+\.\s*/, '').replace(/^Q:\s*/, '').trim(),
+                answer: lines[i + 1].replace(/^A:\s*/, '').trim()
+              });
+            }
+          }
+          
+          return flashcards;
         }
       }
-      
-      return flashcards;
+    } catch (parseError) {
+      console.error('Failed to parse generated content:', parseError);
+      throw new Error('Failed to parse flashcards from generated content');
     }
   };
 
@@ -105,6 +133,18 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsText(file);
     });
+  };
+
+  const downloadFlashcards = (flashcards: any[], setName: string) => {
+    const dataStr = JSON.stringify(flashcards, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${setName.replace(/\s+/g, '_')}_flashcards.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   const generateFlashcards = async () => {
@@ -131,21 +171,23 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
     try {
       let content = textInput.trim();
       
-      // If file is uploaded, extract text from it
       if (file) {
+        console.log('Extracting text from file:', file.name);
         content = await extractTextFromFile(file);
+        console.log('Extracted content length:', content.length);
       }
 
       if (!content) {
         throw new Error('No content to process');
       }
 
-      // Generate flashcards using Gemini API
       const generatedFlashcards = await generateFlashcardsWithGemini(content);
 
       if (!generatedFlashcards || generatedFlashcards.length === 0) {
         throw new Error('No flashcards could be generated from the provided content');
       }
+
+      console.log('Generated flashcards:', generatedFlashcards);
 
       addFlashcardSet({
         name: setName,
@@ -158,6 +200,24 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
         title: "Flashcards Generated!",
         description: `Successfully created ${generatedFlashcards.length} flashcards for "${setName}".`,
       });
+
+      // Offer download option
+      setTimeout(() => {
+        toast({
+          title: "Download Available",
+          description: "Your flashcards are ready for download!",
+          action: (
+            <Button
+              size="sm"
+              onClick={() => downloadFlashcards(generatedFlashcards, setName)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Download
+            </Button>
+          ),
+        });
+      }, 1000);
 
       onClose();
     } catch (error) {
