@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,6 @@ Content: ${content}`
 
     console.log('Generated text:', generatedText);
 
-    // Extract JSON from the response
     try {
       const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
@@ -91,11 +91,9 @@ Content: ${content}`
         console.log('Parsed flashcards:', flashcards);
         return flashcards;
       } else {
-        // Fallback: try to parse the entire response as JSON
         try {
           return JSON.parse(generatedText);
         } catch {
-          // Manual parsing fallback
           const lines = generatedText.split('\n').filter(line => line.trim());
           const flashcards = [];
           
@@ -145,6 +143,11 @@ Content: ${content}`
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+
+    toast({
+      title: "Download Complete",
+      description: `${exportFileDefaultName} has been downloaded successfully.`,
+    });
   };
 
   const generateFlashcards = async () => {
@@ -189,6 +192,7 @@ Content: ${content}`
 
       console.log('Generated flashcards:', generatedFlashcards);
 
+      // Add the flashcard set with proper priority handling
       addFlashcardSet({
         name: setName,
         cards: generatedFlashcards,
@@ -196,34 +200,29 @@ Content: ${content}`
         isRead: false
       });
 
+      // Provide immediate success feedback
       toast({
-        title: "Flashcards Generated!",
-        description: `Successfully created ${generatedFlashcards.length} flashcards for "${setName}".`,
+        title: "✅ Flashcards Generated!",
+        description: `Successfully created ${generatedFlashcards.length} flashcards for "${setName}". ${priority === 'high' ? 'Added to High Priority section.' : ''}`,
+        action: (
+          <Button
+            size="sm"
+            onClick={() => downloadFlashcards(generatedFlashcards, setName)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Download
+          </Button>
+        ),
       });
 
-      // Offer download option
-      setTimeout(() => {
-        toast({
-          title: "Download Available",
-          description: "Your flashcards are ready for download!",
-          action: (
-            <Button
-              size="sm"
-              onClick={() => downloadFlashcards(generatedFlashcards, setName)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              Download
-            </Button>
-          ),
-        });
-      }, 1000);
-
+      // Close the generator to show the new flashcards immediately
       onClose();
+
     } catch (error) {
       console.error('Generation error:', error);
       toast({
-        title: "Generation Failed",
+        title: "❌ Generation Failed",
         description: error instanceof Error ? error.message : "Failed to generate flashcards. Please try again.",
         variant: "destructive"
       });
