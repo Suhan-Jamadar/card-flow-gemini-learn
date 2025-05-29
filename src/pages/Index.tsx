@@ -27,8 +27,11 @@ const Index = () => {
   } = useFlashcards();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
-  // Debug logging
+  // Debug logging with more detail
+  console.log('=== INDEX RENDER ===');
+  console.log('Index component render - flashcards count:', flashcards.length);
   console.log('Index component render - flashcards:', flashcards);
+  console.log('Index component render - filteredFlashcards count:', filteredFlashcards.length);
   console.log('Index component render - filteredFlashcards:', filteredFlashcards);
   console.log('Index component render - activeTab:', activeTab);
   console.log('Index component render - viewMode:', viewMode);
@@ -36,18 +39,26 @@ const Index = () => {
   const highPriorityFlashcards = filteredFlashcards.filter(card => card.priority === 'high');
   const regularFlashcards = filteredFlashcards.filter(card => card.priority !== 'high');
 
+  console.log('High priority flashcards count:', highPriorityFlashcards.length);
   console.log('High priority flashcards:', highPriorityFlashcards);
+  console.log('Regular flashcards count:', regularFlashcards.length);
   console.log('Regular flashcards:', regularFlashcards);
 
   // Auto-switch to high priority tab when new high priority flashcards are added
   useEffect(() => {
     console.log('useEffect for auto-switching tabs triggered');
+    console.log('Current flashcards:', flashcards);
     const lastFlashcard = flashcards[0]; // Most recent flashcard (added at beginning)
     if (lastFlashcard && lastFlashcard.priority === 'high' && viewMode === 'list') {
-      console.log('Switching to priority tab for new high priority flashcard');
+      console.log('Switching to priority tab for new high priority flashcard:', lastFlashcard);
       setActiveTab('priority');
     }
   }, [flashcards, viewMode]);
+
+  // Force re-render when flashcards change
+  useEffect(() => {
+    console.log('Flashcards state changed, forcing update. Count:', flashcards.length);
+  }, [flashcards]);
 
   const handleGeneratorClose = () => {
     console.log('Generator closing...');
@@ -114,6 +125,19 @@ const Index = () => {
           filterBy={filterBy}
           setFilterBy={setFilterBy}
         />
+
+        {/* Debug Info */}
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Debug Information:</h3>
+          <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+            <div>Total flashcards in state: {flashcards.length}</div>
+            <div>Filtered flashcards: {filteredFlashcards.length}</div>
+            <div>High priority: {highPriorityFlashcards.length}</div>
+            <div>Regular priority: {regularFlashcards.length}</div>
+            <div>Active tab: {activeTab}</div>
+            <div>View mode: {viewMode}</div>
+          </div>
+        </div>
 
         {/* View Toggle and Flashcard Display */}
         <div className="mt-8">

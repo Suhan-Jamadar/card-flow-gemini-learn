@@ -47,9 +47,12 @@ export const useFlashcards = () => {
       createdAt: new Date().toISOString(),
     };
     console.log('Created new flashcard set:', newSet);
+    
+    // Use functional update to ensure we get the latest state
     setFlashcards(prev => {
       const updatedFlashcards = [newSet, ...prev];
       console.log('Updated flashcards array:', updatedFlashcards);
+      console.log('Total flashcards after adding:', updatedFlashcards.length);
       return updatedFlashcards;
     });
   };
@@ -85,6 +88,7 @@ export const useFlashcards = () => {
   // Apply filters and sorting
   const filteredAndSortedFlashcards = useMemo(() => {
     console.log('Applying filters - searchTerm:', searchTerm, 'filterBy:', filterBy, 'sortBy:', sortBy);
+    console.log('Base flashcards for filtering:', flashcards);
     let filtered = flashcards;
 
     // Apply search filter
