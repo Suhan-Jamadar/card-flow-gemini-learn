@@ -13,18 +13,24 @@ export const useFlashcards = () => {
 
   // Load flashcards from localStorage on mount
   useEffect(() => {
+    console.log('Loading flashcards from localStorage...');
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        setFlashcards(JSON.parse(saved));
+        const parsedFlashcards = JSON.parse(saved);
+        console.log('Loaded flashcards from localStorage:', parsedFlashcards);
+        setFlashcards(parsedFlashcards);
       } catch (error) {
         console.error('Failed to parse saved flashcards:', error);
       }
+    } else {
+      console.log('No saved flashcards found in localStorage');
     }
   }, []);
 
   // Save to localStorage whenever flashcards change
   useEffect(() => {
+    console.log('Saving flashcards to localStorage:', flashcards);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
   }, [flashcards]);
 
@@ -34,21 +40,29 @@ export const useFlashcards = () => {
     priority: 'low' | 'medium' | 'high';
     isRead: boolean;
   }) => {
+    console.log('Adding new flashcard set:', setData);
     const newSet: FlashcardSet = {
       id: Date.now().toString(),
       ...setData,
       createdAt: new Date().toISOString(),
     };
-    setFlashcards(prev => [newSet, ...prev]);
+    console.log('Created new flashcard set:', newSet);
+    setFlashcards(prev => {
+      const updatedFlashcards = [newSet, ...prev];
+      console.log('Updated flashcards array:', updatedFlashcards);
+      return updatedFlashcards;
+    });
   };
 
   const updateFlashcardSet = (id: string, updates: Partial<FlashcardSet>) => {
+    console.log('Updating flashcard set:', id, updates);
     setFlashcards(prev =>
       prev.map(set => (set.id === id ? { ...set, ...updates } : set))
     );
   };
 
   const removeFlashcardSet = (id: string) => {
+    console.log('Removing flashcard set:', id);
     setFlashcards(prev => prev.filter(set => set.id !== id));
   };
 
@@ -64,11 +78,13 @@ export const useFlashcards = () => {
       groups[groupKey].push(set);
     });
 
+    console.log('Grouped flashcards:', groups);
     return groups;
   }, [flashcards]);
 
   // Apply filters and sorting
   const filteredAndSortedFlashcards = useMemo(() => {
+    console.log('Applying filters - searchTerm:', searchTerm, 'filterBy:', filterBy, 'sortBy:', sortBy);
     let filtered = flashcards;
 
     // Apply search filter
@@ -80,6 +96,7 @@ export const useFlashcards = () => {
           card.answer.toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
+      console.log('After search filter:', filtered);
     }
 
     // Apply status/priority filter
@@ -94,6 +111,7 @@ export const useFlashcards = () => {
           default: return true;
         }
       });
+      console.log('After priority/status filter:', filtered);
     }
 
     // Apply sorting
@@ -115,8 +133,17 @@ export const useFlashcards = () => {
       }
     });
 
+    console.log('Final filtered and sorted flashcards:', sorted);
     return sorted;
   }, [flashcards, searchTerm, filterBy, sortBy]);
+
+  console.log('Current hook state:', {
+    totalFlashcards: flashcards.length,
+    filteredFlashcards: filteredAndSortedFlashcards.length,
+    searchTerm,
+    filterBy,
+    sortBy
+  });
 
   return {
     flashcards,

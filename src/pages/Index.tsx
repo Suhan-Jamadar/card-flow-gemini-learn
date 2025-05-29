@@ -27,21 +27,34 @@ const Index = () => {
   } = useFlashcards();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
+  // Debug logging
+  console.log('Index component render - flashcards:', flashcards);
+  console.log('Index component render - filteredFlashcards:', filteredFlashcards);
+  console.log('Index component render - activeTab:', activeTab);
+  console.log('Index component render - viewMode:', viewMode);
+
   const highPriorityFlashcards = filteredFlashcards.filter(card => card.priority === 'high');
   const regularFlashcards = filteredFlashcards.filter(card => card.priority !== 'high');
 
+  console.log('High priority flashcards:', highPriorityFlashcards);
+  console.log('Regular flashcards:', regularFlashcards);
+
   // Auto-switch to high priority tab when new high priority flashcards are added
   useEffect(() => {
+    console.log('useEffect for auto-switching tabs triggered');
     const lastFlashcard = flashcards[0]; // Most recent flashcard (added at beginning)
     if (lastFlashcard && lastFlashcard.priority === 'high' && viewMode === 'list') {
+      console.log('Switching to priority tab for new high priority flashcard');
       setActiveTab('priority');
     }
   }, [flashcards, viewMode]);
 
   const handleGeneratorClose = () => {
+    console.log('Generator closing...');
     setShowGenerator(false);
     // Ensure we're in list view to see the new flashcards
     if (viewMode === 'grouped') {
+      console.log('Switching from grouped to list view');
       setViewMode('list');
     }
   };

@@ -151,7 +151,10 @@ Content: ${content}`
   };
 
   const generateFlashcards = async () => {
+    console.log('Starting flashcard generation...');
+    
     if (!setName.trim()) {
+      console.log('Missing set name');
       toast({
         title: "Missing Set Name",
         description: "Please provide a name for your flashcard set.",
@@ -161,6 +164,7 @@ Content: ${content}`
     }
 
     if (!textInput.trim() && !file) {
+      console.log('No content provided');
       toast({
         title: "No Content Provided",
         description: "Please provide text input or upload a file.",
@@ -184,6 +188,7 @@ Content: ${content}`
         throw new Error('No content to process');
       }
 
+      console.log('Generating flashcards with content:', content.substring(0, 100) + '...');
       const generatedFlashcards = await generateFlashcardsWithGemini(content);
 
       if (!generatedFlashcards || generatedFlashcards.length === 0) {
@@ -192,13 +197,20 @@ Content: ${content}`
 
       console.log('Generated flashcards:', generatedFlashcards);
 
-      // Add the flashcard set with proper priority handling
-      addFlashcardSet({
+      // Create the flashcard set data
+      const flashcardSetData = {
         name: setName,
         cards: generatedFlashcards,
         priority: priority,
         isRead: false
-      });
+      };
+
+      console.log('Adding flashcard set with data:', flashcardSetData);
+
+      // Add the flashcard set
+      addFlashcardSet(flashcardSetData);
+
+      console.log('Flashcard set added successfully');
 
       // Provide immediate success feedback
       toast({
@@ -216,6 +228,7 @@ Content: ${content}`
         ),
       });
 
+      console.log('Closing generator...');
       // Close the generator to show the new flashcards immediately
       onClose();
 
