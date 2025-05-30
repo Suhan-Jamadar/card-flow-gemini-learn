@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FlashcardSet, Flashcard } from '@/types/flashcard';
 import { SortOption, FilterOption } from '@/components/SearchAndFilter';
 
@@ -10,6 +10,13 @@ export const useFlashcards = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Force update function to trigger re-renders
+  const triggerForceUpdate = useCallback(() => {
+    console.log('Triggering force update...');
+    setForceUpdate(prev => prev + 1);
+  }, []);
 
   // Load flashcards from localStorage on mount
   useEffect(() => {
@@ -34,13 +41,15 @@ export const useFlashcards = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
   }, [flashcards]);
 
-  const addFlashcardSet = (setData: {
+  const addFlashcardSet = useCallback((setData: {
     name: string;
     cards: Flashcard[];
     priority: 'low' | 'medium' | 'high';
     isRead: boolean;
   }) => {
+    console.log('=== ADDING FLASHCARD SET ===');
     console.log('Adding new flashcard set:', setData);
+    
     const newSet: FlashcardSet = {
       id: Date.now().toString(),
       ...setData,
@@ -51,23 +60,45 @@ export const useFlashcards = () => {
     // Use functional update to ensure we get the latest state
     setFlashcards(prev => {
       const updatedFlashcards = [newSet, ...prev];
+      console.log('Previous flashcards length:', prev.length);
+      console.log('Updated flashcards length:', updatedFlashcards.length);
       console.log('Updated flashcards array:', updatedFlashcards);
-      console.log('Total flashcards after adding:', updatedFlashcards.length);
+      
+      // Immediate localStorage save
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedFlashcards));
+      console.log('Immediately saved to localStorage');
+      
       return updatedFlashcards;
     });
-  };
+    
+    // Trigger force update after a short delay to ensure state propagation
+    setTimeout(() => {
+      console.log('Triggering force update after flashcard addition');
+      triggerForceUpdate();
+    }, 100);
+    
+    console.log('=== FLASHCARD SET ADDITION COMPLETE ===');
+  }, [triggerForceUpdate]);
 
-  const updateFlashcardSet = (id: string, updates: Partial<FlashcardSet>) => {
+  const updateFlashcardSet = useCallback((id: string, updates: Partial<FlashcardSet>) => {
     console.log('Updating flashcard set:', id, updates);
-    setFlashcards(prev =>
-      prev.map(set => (set.id === id ? { ...set, ...updates } : set))
-    );
-  };
+    setFlashcards(prev => {
+      const updated = prev.map(set => (set.id === id ? { ...set, ...updates } : set));
+      console.log('Updated flashcards after modification:', updated);
+      return updated;
+    });
+    triggerForceUpdate();
+  }, [triggerForceUpdate]);
 
-  const removeFlashcardSet = (id: string) => {
+  const removeFlashcardSet = useCallback((id: string) => {
     console.log('Removing flashcard set:', id);
-    setFlashcards(prev => prev.filter(set => set.id !== id));
-  };
+    setFlashcards(prev => {
+      const filtered = prev.filter(set => set.id !== id);
+      console.log('Remaining flashcards after deletion:', filtered);
+      return filtered;
+    });
+    triggerForceUpdate();
+  }, [triggerForceUpdate]);
 
   // Group flashcards by name
   const groupedFlashcards = useMemo(() => {
@@ -83,12 +114,15 @@ export const useFlashcards = () => {
 
     console.log('Grouped flashcards:', groups);
     return groups;
-  }, [flashcards]);
+  }, [flashcards, forceUpdate]);
 
   // Apply filters and sorting
   const filteredAndSortedFlashcards = useMemo(() => {
+    console.log('=== FILTERING AND SORTING ===');
     console.log('Applying filters - searchTerm:', searchTerm, 'filterBy:', filterBy, 'sortBy:', sortBy);
     console.log('Base flashcards for filtering:', flashcards);
+    console.log('Base flashcards length:', flashcards.length);
+    
     let filtered = flashcards;
 
     // Apply search filter
@@ -138,15 +172,19 @@ export const useFlashcards = () => {
     });
 
     console.log('Final filtered and sorted flashcards:', sorted);
+    console.log('Final filtered count:', sorted.length);
+    console.log('=== FILTERING COMPLETE ===');
     return sorted;
-  }, [flashcards, searchTerm, filterBy, sortBy]);
+  }, [flashcards, searchTerm, filterBy, sortBy, forceUpdate]);
 
+  console.log('=== HOOK STATE SUMMARY ===');
   console.log('Current hook state:', {
     totalFlashcards: flashcards.length,
     filteredFlashcards: filteredAndSortedFlashcards.length,
     searchTerm,
     filterBy,
-    sortBy
+    sortBy,
+    forceUpdateCount: forceUpdate
   });
 
   return {
@@ -162,5 +200,6 @@ export const useFlashcards = () => {
     addFlashcardSet,
     updateFlashcardSet,
     removeFlashcardSet,
+    triggerForceUpdate,
   };
 };
