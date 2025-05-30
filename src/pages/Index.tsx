@@ -30,70 +30,54 @@ const Index = () => {
   } = useFlashcards();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
-  // Debug logging with more detail
-  console.log('=== INDEX RENDER START ===');
-  console.log('Render key:', renderKey);
-  console.log('Index component render - flashcards count:', flashcards.length);
-  console.log('Index component render - flashcards:', flashcards);
-  console.log('Index component render - filteredFlashcards count:', filteredFlashcards.length);
-  console.log('Index component render - filteredFlashcards:', filteredFlashcards);
-  console.log('Index component render - activeTab:', activeTab);
-  console.log('Index component render - viewMode:', viewMode);
+  // Debug logging commented out
+  // console.log('=== INDEX RENDER START ===');
+  // console.log('Render key:', renderKey);
+  // console.log('Index component render - flashcards count:', flashcards.length);
 
   const highPriorityFlashcards = filteredFlashcards.filter(card => card.priority === 'high');
   const regularFlashcards = filteredFlashcards.filter(card => card.priority !== 'high');
 
-  console.log('High priority flashcards count:', highPriorityFlashcards.length);
-  console.log('High priority flashcards:', highPriorityFlashcards);
-  console.log('Regular flashcards count:', regularFlashcards.length);
-  console.log('Regular flashcards:', regularFlashcards);
-
   // Force re-render when flashcards change
   useEffect(() => {
-    console.log('Flashcards state changed, forcing component update. Count:', flashcards.length);
+    // console.log('Flashcards state changed, forcing component update. Count:', flashcards.length);
     setRenderKey(prev => prev + 1);
   }, [flashcards]);
 
   // Auto-switch to high priority tab when new high priority flashcards are added
   useEffect(() => {
-    console.log('useEffect for auto-switching tabs triggered');
-    console.log('Current flashcards:', flashcards);
+    // console.log('useEffect for auto-switching tabs triggered');
     const lastFlashcard = flashcards[0]; // Most recent flashcard (added at beginning)
     if (lastFlashcard && lastFlashcard.priority === 'high' && viewMode === 'list') {
-      console.log('Switching to priority tab for new high priority flashcard:', lastFlashcard);
+      // console.log('Switching to priority tab for new high priority flashcard:', lastFlashcard);
       setActiveTab('priority');
     }
   }, [flashcards, viewMode]);
 
   const handleGeneratorClose = useCallback(() => {
-    console.log('=== GENERATOR CLOSING ===');
-    console.log('Generator closing...');
+    // console.log('=== GENERATOR CLOSING ===');
     setShowGenerator(false);
     
     // Ensure we're in list view to see the new flashcards
     if (viewMode === 'grouped') {
-      console.log('Switching from grouped to list view');
+      // console.log('Switching from grouped to list view');
       setViewMode('list');
     }
     
     // Force update to ensure immediate display
     setTimeout(() => {
-      console.log('Forcing update after generator close');
+      // console.log('Forcing update after generator close');
       triggerForceUpdate();
       setRenderKey(prev => prev + 1);
     }, 200);
-    
-    console.log('=== GENERATOR CLOSE COMPLETE ===');
   }, [viewMode, triggerForceUpdate]);
 
   // Force refresh function for debugging
   const handleForceRefresh = useCallback(() => {
-    console.log('=== MANUAL FORCE REFRESH ===');
+    // console.log('=== MANUAL FORCE REFRESH ===');
     triggerForceUpdate();
     setRenderKey(prev => prev + 1);
   }, [triggerForceUpdate]);
-
-  console.log('=== INDEX RENDER END ===');
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
@@ -151,7 +135,8 @@ const Index = () => {
           setFilterBy={setFilterBy}
         />
 
-        {/* Enhanced Debug Info */}
+        {/* Debug Info - Commented Out */}
+        {/*
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-semibold text-blue-900 dark:text-blue-100">Debug Information:</h3>
@@ -175,6 +160,7 @@ const Index = () => {
             <div>LocalStorage check: {localStorage.getItem('flashcards-pro-data') ? 'Data found' : 'No data'}</div>
           </div>
         </div>
+        */}
 
         {/* View Toggle and Flashcard Display */}
         <div className="mt-8" key={`display-${renderKey}`}>

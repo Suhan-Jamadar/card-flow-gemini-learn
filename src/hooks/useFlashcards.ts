@@ -14,30 +14,24 @@ export const useFlashcards = () => {
 
   // Force update function to trigger re-renders
   const triggerForceUpdate = useCallback(() => {
-    console.log('Triggering force update...');
     setForceUpdate(prev => prev + 1);
   }, []);
 
   // Load flashcards from localStorage on mount
   useEffect(() => {
-    console.log('Loading flashcards from localStorage...');
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsedFlashcards = JSON.parse(saved);
-        console.log('Loaded flashcards from localStorage:', parsedFlashcards);
         setFlashcards(parsedFlashcards);
       } catch (error) {
         console.error('Failed to parse saved flashcards:', error);
       }
-    } else {
-      console.log('No saved flashcards found in localStorage');
     }
   }, []);
 
   // Save to localStorage whenever flashcards change
   useEffect(() => {
-    console.log('Saving flashcards to localStorage:', flashcards);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
   }, [flashcards]);
 
@@ -47,10 +41,7 @@ export const useFlashcards = () => {
     priority: 'low' | 'medium' | 'high';
     isRead: boolean;
   }) => {
-    console.log('=== ADDING FLASHCARD SET ===');
-    console.log('Adding new flashcard set:', setData);
-    
-    // Limit cards to 5-6 and ensure they have isRead property
+    // Limit cards to 5 and ensure they have isRead property
     const limitedCards = setData.cards.slice(0, 5).map(card => ({
       ...card,
       isRead: false // Initialize all new cards as unread
@@ -62,46 +53,34 @@ export const useFlashcards = () => {
       cards: limitedCards,
       createdAt: new Date().toISOString(),
     };
-    console.log('Created new flashcard set with limited cards:', newSet);
     
     // Use functional update to ensure we get the latest state
     setFlashcards(prev => {
       const updatedFlashcards = [newSet, ...prev];
-      console.log('Previous flashcards length:', prev.length);
-      console.log('Updated flashcards length:', updatedFlashcards.length);
-      console.log('Updated flashcards array:', updatedFlashcards);
       
       // Immediate localStorage save
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedFlashcards));
-      console.log('Immediately saved to localStorage');
       
       return updatedFlashcards;
     });
     
     // Trigger force update after a short delay to ensure state propagation
     setTimeout(() => {
-      console.log('Triggering force update after flashcard addition');
       triggerForceUpdate();
     }, 100);
-    
-    console.log('=== FLASHCARD SET ADDITION COMPLETE ===');
   }, [triggerForceUpdate]);
 
   const updateFlashcardSet = useCallback((id: string, updates: Partial<FlashcardSet>) => {
-    console.log('Updating flashcard set:', id, updates);
     setFlashcards(prev => {
       const updated = prev.map(set => (set.id === id ? { ...set, ...updates } : set));
-      console.log('Updated flashcards after modification:', updated);
       return updated;
     });
     triggerForceUpdate();
   }, [triggerForceUpdate]);
 
   const removeFlashcardSet = useCallback((id: string) => {
-    console.log('Removing flashcard set:', id);
     setFlashcards(prev => {
       const filtered = prev.filter(set => set.id !== id);
-      console.log('Remaining flashcards after deletion:', filtered);
       return filtered;
     });
     triggerForceUpdate();
@@ -119,17 +98,11 @@ export const useFlashcards = () => {
       groups[groupKey].push(set);
     });
 
-    console.log('Grouped flashcards:', groups);
     return groups;
   }, [flashcards, forceUpdate]);
 
   // Apply filters and sorting
   const filteredAndSortedFlashcards = useMemo(() => {
-    console.log('=== FILTERING AND SORTING ===');
-    console.log('Applying filters - searchTerm:', searchTerm, 'filterBy:', filterBy, 'sortBy:', sortBy);
-    console.log('Base flashcards for filtering:', flashcards);
-    console.log('Base flashcards length:', flashcards.length);
-    
     let filtered = flashcards;
 
     // Apply search filter
@@ -141,7 +114,6 @@ export const useFlashcards = () => {
           card.answer.toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
-      console.log('After search filter:', filtered);
     }
 
     // Apply status/priority filter
@@ -150,17 +122,16 @@ export const useFlashcards = () => {
         switch (filterBy) {
           case 'read': 
             // A set is considered "read" if ALL its cards are read
-            return set.cards.length > 0 && set.cards.every(card => card.isRead);
+            return set.cards.length > 0 && set.cards.every(card => card.isRead === true);
           case 'unread': 
             // A set is considered "unread" if ANY card is unread
-            return set.cards.some(card => !card.isRead);
+            return set.cards.some(card => card.isRead !== true);
           case 'high': return set.priority === 'high';
           case 'medium': return set.priority === 'medium';
           case 'low': return set.priority === 'low';
           default: return true;
         }
       });
-      console.log('After priority/status filter:', filtered);
     }
 
     // Apply sorting
@@ -182,21 +153,8 @@ export const useFlashcards = () => {
       }
     });
 
-    console.log('Final filtered and sorted flashcards:', sorted);
-    console.log('Final filtered count:', sorted.length);
-    console.log('=== FILTERING COMPLETE ===');
     return sorted;
   }, [flashcards, searchTerm, filterBy, sortBy, forceUpdate]);
-
-  console.log('=== HOOK STATE SUMMARY ===');
-  console.log('Current hook state:', {
-    totalFlashcards: flashcards.length,
-    filteredFlashcards: filteredAndSortedFlashcards.length,
-    searchTerm,
-    filterBy,
-    sortBy,
-    forceUpdateCount: forceUpdate
-  });
 
   return {
     flashcards,

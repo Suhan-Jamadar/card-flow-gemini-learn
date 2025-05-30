@@ -8,11 +8,12 @@ interface FlashcardDisplayProps {
 }
 
 export const FlashcardDisplay: React.FC<FlashcardDisplayProps> = ({ flashcards }) => {
-  console.log('FlashcardDisplay rendering with flashcards:', flashcards);
-  console.log('FlashcardDisplay flashcards count:', flashcards.length);
+  // Debug logs commented out
+  // console.log('FlashcardDisplay rendering with flashcards:', flashcards);
+  // console.log('FlashcardDisplay flashcards count:', flashcards.length);
 
   if (flashcards.length === 0) {
-    console.log('FlashcardDisplay: No flashcards to display');
+    // console.log('FlashcardDisplay: No flashcards to display');
     return (
       <div className="text-center py-12">
         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
@@ -28,12 +29,12 @@ export const FlashcardDisplay: React.FC<FlashcardDisplayProps> = ({ flashcards }
     );
   }
 
-  console.log('FlashcardDisplay: Rendering', flashcards.length, 'flashcard sets');
+  // console.log('FlashcardDisplay: Rendering', flashcards.length, 'flashcard sets');
 
   return (
     <div className="space-y-8">
       {flashcards.map((flashcardSet, index) => {
-        console.log(`Rendering FlashcardGroup ${index}:`, flashcardSet);
+        // console.log(`Rendering FlashcardGroup ${index}:`, flashcardSet);
         return (
           <FlashcardGroup key={`${flashcardSet.id}-${index}`} flashcardSet={flashcardSet} />
         );
