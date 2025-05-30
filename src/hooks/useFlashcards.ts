@@ -50,12 +50,19 @@ export const useFlashcards = () => {
     console.log('=== ADDING FLASHCARD SET ===');
     console.log('Adding new flashcard set:', setData);
     
+    // Limit cards to 5-6 and ensure they have isRead property
+    const limitedCards = setData.cards.slice(0, 5).map(card => ({
+      ...card,
+      isRead: false // Initialize all new cards as unread
+    }));
+    
     const newSet: FlashcardSet = {
       id: Date.now().toString(),
       ...setData,
+      cards: limitedCards,
       createdAt: new Date().toISOString(),
     };
-    console.log('Created new flashcard set:', newSet);
+    console.log('Created new flashcard set with limited cards:', newSet);
     
     // Use functional update to ensure we get the latest state
     setFlashcards(prev => {
@@ -141,8 +148,12 @@ export const useFlashcards = () => {
     if (filterBy !== 'all') {
       filtered = filtered.filter(set => {
         switch (filterBy) {
-          case 'read': return set.isRead;
-          case 'unread': return !set.isRead;
+          case 'read': 
+            // A set is considered "read" if ALL its cards are read
+            return set.cards.length > 0 && set.cards.every(card => card.isRead);
+          case 'unread': 
+            // A set is considered "unread" if ANY card is unread
+            return set.cards.some(card => !card.isRead);
           case 'high': return set.priority === 'high';
           case 'medium': return set.priority === 'medium';
           case 'low': return set.priority === 'low';

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff } from 'lucide-react';
 import { useFlashcards } from '@/hooks/useFlashcards';
@@ -10,28 +10,45 @@ interface FlashcardItemProps {
   answer: string;
   index: number;
   flashcardSetId: string;
+  isRead?: boolean;
 }
 
 export const FlashcardItem: React.FC<FlashcardItemProps> = ({ 
   question, 
   answer, 
   index, 
-  flashcardSetId 
+  flashcardSetId,
+  isRead: initialIsRead = false
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isRead, setIsRead] = useState(false);
+  const [isRead, setIsRead] = useState(initialIsRead);
   const { updateFlashcardSet, flashcards } = useFlashcards();
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setIsRead(initialIsRead);
+  }, [initialIsRead]);
 
   const handleMarkAsRead = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card flip when clicking button
-    setIsRead(!isRead);
+    const newReadState = !isRead;
+    setIsRead(newReadState);
     
-    // Also mark the entire set as read if this is the last unread card
+    // Update the flashcard set with the new read state for this specific card
     const flashcardSet = flashcards.find(set => set.id === flashcardSetId);
-    if (flashcardSet && !isRead) {
+    if (flashcardSet) {
+      const updatedCards = flashcardSet.cards.map((card, cardIndex) => {
+        if (cardIndex === index) {
+          return { ...card, isRead: newReadState };
+        }
+        return card;
+      });
+      
+      updateFlashcardSet(flashcardSetId, { cards: updatedCards });
+      
       toast({
-        title: "✅ Card Marked as Read",
-        description: `Question ${index + 1} completed!`,
+        title: newReadState ? "✅ Card Marked as Read" : "📖 Card Marked as Unread",
+        description: `Question ${index + 1} ${newReadState ? 'completed' : 'marked for review'}!`,
       });
     }
   };

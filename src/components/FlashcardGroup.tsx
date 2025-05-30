@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FlashcardSet } from '@/types/flashcard';
 import { FlashcardItem } from './FlashcardItem';
@@ -244,6 +245,7 @@ Total Study Time Estimated: ${flashcardSet.cards.length * 2} minutes`;
                 answer={card.answer}
                 index={index}
                 flashcardSetId={flashcardSet.id}
+                isRead={card.isRead || false}
               />
             ))}
           </div>
