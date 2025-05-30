@@ -2,6 +2,7 @@
 export interface Flashcard {
   question: string;
   answer: string;
+  isRead?: boolean;
 }
 
 export interface FlashcardSet {
