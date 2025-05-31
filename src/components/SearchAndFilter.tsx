@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'priority';
-export type FilterOption = 'all' | 'read' | 'unread' | 'high' | 'medium' | 'low';
+export type FilterOption = 'all' | 'high' | 'medium' | 'low';
 
 interface SearchAndFilterProps {
   searchTerm: string;
@@ -46,8 +46,6 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   const getFilterLabel = (filter: FilterOption) => {
     switch (filter) {
       case 'all': return 'All Cards';
-      case 'read': return 'Read Only';
-      case 'unread': return 'Unread Only';
       case 'high': return 'High Priority';
       case 'medium': return 'Medium Priority';
       case 'low': return 'Low Priority';
@@ -126,13 +124,6 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => setFilterBy('all')}>
               All Cards
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setFilterBy('read')}>
-              Read Only
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setFilterBy('unread')}>
-              Unread Only
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setFilterBy('high')}>

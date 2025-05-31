@@ -4,6 +4,7 @@ import { FlashcardGenerator } from '@/components/FlashcardGenerator';
 import { FlashcardDisplay } from '@/components/FlashcardDisplay';
 import { GroupedFlashcardDisplay } from '@/components/GroupedFlashcardDisplay';
 import { SearchAndFilter } from '@/components/SearchAndFilter';
+import { Footer } from '@/components/Footer';
 import { useFlashcards } from '@/hooks/useFlashcards';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { Plus, Moon, Sun, Grid, List } from 'lucide-react';
@@ -30,54 +31,36 @@ const Index = () => {
   } = useFlashcards();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
-  // Debug logging commented out
-  // console.log('=== INDEX RENDER START ===');
-  // console.log('Render key:', renderKey);
-  // console.log('Index component render - flashcards count:', flashcards.length);
-
   const highPriorityFlashcards = filteredFlashcards.filter(card => card.priority === 'high');
   const regularFlashcards = filteredFlashcards.filter(card => card.priority !== 'high');
 
   // Force re-render when flashcards change
   useEffect(() => {
-    // console.log('Flashcards state changed, forcing component update. Count:', flashcards.length);
     setRenderKey(prev => prev + 1);
   }, [flashcards]);
 
   // Auto-switch to high priority tab when new high priority flashcards are added
   useEffect(() => {
-    // console.log('useEffect for auto-switching tabs triggered');
     const lastFlashcard = flashcards[0]; // Most recent flashcard (added at beginning)
     if (lastFlashcard && lastFlashcard.priority === 'high' && viewMode === 'list') {
-      // console.log('Switching to priority tab for new high priority flashcard:', lastFlashcard);
       setActiveTab('priority');
     }
   }, [flashcards, viewMode]);
 
   const handleGeneratorClose = useCallback(() => {
-    // console.log('=== GENERATOR CLOSING ===');
     setShowGenerator(false);
     
     // Ensure we're in list view to see the new flashcards
     if (viewMode === 'grouped') {
-      // console.log('Switching from grouped to list view');
       setViewMode('list');
     }
     
     // Force update to ensure immediate display
     setTimeout(() => {
-      // console.log('Forcing update after generator close');
       triggerForceUpdate();
       setRenderKey(prev => prev + 1);
     }, 200);
   }, [viewMode, triggerForceUpdate]);
-
-  // Force refresh function for debugging
-  const handleForceRefresh = useCallback(() => {
-    // console.log('=== MANUAL FORCE REFRESH ===');
-    triggerForceUpdate();
-    setRenderKey(prev => prev + 1);
-  }, [triggerForceUpdate]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
@@ -134,33 +117,6 @@ const Index = () => {
           filterBy={filterBy}
           setFilterBy={setFilterBy}
         />
-
-        {/* Debug Info - Commented Out */}
-        {/*
-        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100">Debug Information:</h3>
-            <Button 
-              onClick={handleForceRefresh}
-              size="sm"
-              variant="outline"
-              className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
-            >
-              Force Refresh
-            </Button>
-          </div>
-          <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-            <div>Total flashcards in state: {flashcards.length}</div>
-            <div>Filtered flashcards: {filteredFlashcards.length}</div>
-            <div>High priority: {highPriorityFlashcards.length}</div>
-            <div>Regular priority: {regularFlashcards.length}</div>
-            <div>Active tab: {activeTab}</div>
-            <div>View mode: {viewMode}</div>
-            <div>Render key: {renderKey}</div>
-            <div>LocalStorage check: {localStorage.getItem('flashcards-pro-data') ? 'Data found' : 'No data'}</div>
-          </div>
-        </div>
-        */}
 
         {/* View Toggle and Flashcard Display */}
         <div className="mt-8" key={`display-${renderKey}`}>
@@ -231,6 +187,9 @@ const Index = () => {
           <FlashcardGenerator onClose={handleGeneratorClose} />
         )}
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

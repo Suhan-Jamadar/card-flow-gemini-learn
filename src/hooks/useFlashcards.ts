@@ -134,7 +134,7 @@ export const useFlashcards = () => {
     return groups;
   }, [flashcards, updateCounter]);
 
-  // Apply filters and sorting with enhanced debugging and proper state tracking
+  // Apply filters and sorting with priority filter only
   const filteredAndSortedFlashcards = useMemo(() => {
     console.log('🔍 Filter process starting');
     console.log('🔍 Total flashcards:', flashcards.length);
@@ -155,24 +155,12 @@ export const useFlashcards = () => {
       console.log('🔍 After search filter:', filtered.length);
     }
 
-    // Apply status/priority filter with detailed logging
+    // Apply priority filter only
     if (filterBy !== 'all') {
-      console.log('🔍 Applying filter:', filterBy);
+      console.log('🔍 Applying priority filter:', filterBy);
       
       filtered = filtered.filter(set => {
         switch (filterBy) {
-          case 'read': {
-            // A set is "read" if ALL cards are read
-            const allCardsRead = set.cards.length > 0 && set.cards.every(card => card.isRead === true);
-            console.log(`📖 Set "${set.name}" - all cards read:`, allCardsRead, 'Cards:', set.cards.map((c, i) => `${i+1}:${c.isRead}`));
-            return allCardsRead;
-          }
-          case 'unread': {
-            // A set is "unread" if ANY card is unread
-            const hasUnreadCards = set.cards.some(card => card.isRead === false);
-            console.log(`📖 Set "${set.name}" - has unread cards:`, hasUnreadCards, 'Cards:', set.cards.map((c, i) => `${i+1}:${c.isRead}`));
-            return hasUnreadCards;
-          }
           case 'high': return set.priority === 'high';
           case 'medium': return set.priority === 'medium';
           case 'low': return set.priority === 'low';
