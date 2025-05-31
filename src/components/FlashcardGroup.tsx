@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FlashcardSet } from '@/types/flashcard';
 import { FlashcardItem } from './FlashcardItem';
@@ -133,6 +132,15 @@ Total Study Time Estimated: ${flashcardSet.cards.length * 2} minutes`;
     }
   };
 
+  const handleDelete = () => {
+    removeFlashcardSet(flashcardSet.id);
+    toast({
+      title: "🗑️ Flashcard Set Deleted",
+      description: `"${flashcardSet.name}" has been permanently removed.`,
+      variant: "destructive"
+    });
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -245,7 +253,7 @@ Total Study Time Estimated: ${flashcardSet.cards.length * 2} minutes`;
                 answer={card.answer}
                 index={index}
                 flashcardSetId={flashcardSet.id}
-                isRead={card.isRead || false}
+                isRead={card.isRead}
               />
             ))}
           </div>
@@ -253,13 +261,4 @@ Total Study Time Estimated: ${flashcardSet.cards.length * 2} minutes`;
       )}
     </div>
   );
-
-  function handleDelete() {
-    removeFlashcardSet(flashcardSet.id);
-    toast({
-      title: "🗑️ Flashcard Set Deleted",
-      description: `"${flashcardSet.name}" has been permanently removed.`,
-      variant: "destructive"
-    });
-  }
 };

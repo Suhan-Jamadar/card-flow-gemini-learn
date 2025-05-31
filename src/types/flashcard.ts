@@ -2,7 +2,7 @@
 export interface Flashcard {
   question: string;
   answer: string;
-  isRead?: boolean;
+  isRead: boolean; // Make this required, not optional
 }
 
 export interface FlashcardSet {

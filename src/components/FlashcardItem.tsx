@@ -10,7 +10,7 @@ interface FlashcardItemProps {
   answer: string;
   index: number;
   flashcardSetId: string;
-  isRead?: boolean;
+  isRead: boolean; // Now required, not optional
 }
 
 export const FlashcardItem: React.FC<FlashcardItemProps> = ({ 
@@ -18,7 +18,7 @@ export const FlashcardItem: React.FC<FlashcardItemProps> = ({
   answer, 
   index, 
   flashcardSetId,
-  isRead: initialIsRead = false
+  isRead: initialIsRead
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isRead, setIsRead] = useState(initialIsRead);
@@ -34,6 +34,8 @@ export const FlashcardItem: React.FC<FlashcardItemProps> = ({
     const newReadState = !isRead;
     setIsRead(newReadState);
     
+    console.log(`📖 Marking card ${index + 1} in set ${flashcardSetId} as ${newReadState ? 'read' : 'unread'}`);
+    
     // Update the flashcard set with the new read state for this specific card
     const flashcardSet = flashcards.find(set => set.id === flashcardSetId);
     if (flashcardSet) {
@@ -43,6 +45,8 @@ export const FlashcardItem: React.FC<FlashcardItemProps> = ({
         }
         return card;
       });
+      
+      console.log('📖 Updated cards array:', updatedCards.map((c, i) => `Card ${i + 1}: ${c.isRead}`));
       
       updateFlashcardSet(flashcardSetId, { cards: updatedCards });
       
