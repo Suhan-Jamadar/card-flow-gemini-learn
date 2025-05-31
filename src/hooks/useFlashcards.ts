@@ -21,12 +21,12 @@ export const useFlashcards = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
-  const [forceUpdate, setForceUpdate] = useState(0);
+  const [updateCounter, setUpdateCounter] = useState(0);
 
-  // Force update function to trigger re-renders
-  const triggerForceUpdate = useCallback(() => {
-    console.log('🔄 Force update triggered');
-    setForceUpdate(prev => prev + 1);
+  // Enhanced update trigger that increments a counter
+  const triggerUpdate = useCallback(() => {
+    console.log('🔄 Triggering filter update');
+    setUpdateCounter(prev => prev + 1);
   }, []);
 
   // Load flashcards from localStorage on mount with data migration
@@ -36,11 +36,11 @@ export const useFlashcards = () => {
       try {
         const parsedFlashcards = JSON.parse(saved);
         const migratedFlashcards = migrateFlashcardsData(parsedFlashcards);
+        console.log('📦 Loading flashcards:', migratedFlashcards);
         setFlashcards(migratedFlashcards);
         
         // Save migrated data back to localStorage
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedFlashcards));
-        console.log('📦 Loaded and migrated flashcards:', migratedFlashcards.length);
       } catch (error) {
         console.error('Failed to parse saved flashcards:', error);
       }
@@ -51,7 +51,7 @@ export const useFlashcards = () => {
   useEffect(() => {
     if (flashcards.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
-      console.log('💾 Saved flashcards to localStorage:', flashcards.length);
+      console.log('💾 Saved flashcards to localStorage');
     }
   }, [flashcards]);
 
@@ -74,32 +74,26 @@ export const useFlashcards = () => {
       createdAt: new Date().toISOString(),
     };
     
-    console.log('➕ Adding new flashcard set:', newSet.name, 'with', limitedCards.length, 'cards');
+    console.log('➕ Adding new flashcard set:', newSet.name);
     
-    // Use functional update to ensure we get the latest state
     setFlashcards(prev => {
-      const updatedFlashcards = [newSet, ...prev];
-      
-      // Immediate localStorage save
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedFlashcards));
-      
-      return updatedFlashcards;
+      const updated = [newSet, ...prev];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
     });
     
-    // Trigger force update after a short delay to ensure state propagation
-    setTimeout(() => {
-      triggerForceUpdate();
-    }, 100);
-  }, [triggerForceUpdate]);
+    // Trigger immediate update
+    setTimeout(() => triggerUpdate(), 100);
+  }, [triggerUpdate]);
 
   const updateFlashcardSet = useCallback((id: string, updates: Partial<FlashcardSet>) => {
-    console.log('🔄 Updating flashcard set:', id, 'with updates:', updates);
+    console.log('🔄 Updating flashcard set:', id, updates);
     
     setFlashcards(prev => {
       const updated = prev.map(set => {
         if (set.id === id) {
           const updatedSet = { ...set, ...updates };
-          console.log('✅ Updated set:', updatedSet.name, 'cards:', updatedSet.cards.map(c => c.isRead));
+          console.log('✅ Updated set cards read states:', updatedSet.cards?.map(c => c.isRead) || 'no cards update');
           return updatedSet;
         }
         return set;
@@ -107,13 +101,14 @@ export const useFlashcards = () => {
       
       // Immediate localStorage save
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      console.log('💾 Saved updated flashcards to localStorage');
       
       return updated;
     });
     
-    // Trigger force update immediately
-    triggerForceUpdate();
-  }, [triggerForceUpdate]);
+    // Immediate update trigger
+    triggerUpdate();
+  }, [triggerUpdate]);
 
   const removeFlashcardSet = useCallback((id: string) => {
     setFlashcards(prev => {
@@ -121,8 +116,8 @@ export const useFlashcards = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
       return filtered;
     });
-    triggerForceUpdate();
-  }, [triggerForceUpdate]);
+    triggerUpdate();
+  }, [triggerUpdate]);
 
   // Group flashcards by name
   const groupedFlashcards = useMemo(() => {
@@ -137,12 +132,14 @@ export const useFlashcards = () => {
     });
 
     return groups;
-  }, [flashcards, forceUpdate]);
+  }, [flashcards, updateCounter]);
 
-  // Apply filters and sorting with enhanced debugging
+  // Apply filters and sorting with enhanced debugging and proper state tracking
   const filteredAndSortedFlashcards = useMemo(() => {
-    console.log('🔍 Starting filter process with', flashcards.length, 'total flashcards');
-    console.log('🔍 Filter by:', filterBy, 'Search term:', searchTerm);
+    console.log('🔍 Filter process starting');
+    console.log('🔍 Total flashcards:', flashcards.length);
+    console.log('🔍 Filter by:', filterBy);
+    console.log('🔍 Update counter:', updateCounter);
     
     let filtered = flashcards;
 
@@ -155,25 +152,27 @@ export const useFlashcards = () => {
           card.answer.toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
-      console.log('🔍 After search filter:', filtered.length, 'sets');
+      console.log('🔍 After search filter:', filtered.length);
     }
 
-    // Apply status/priority filter with enhanced logic
+    // Apply status/priority filter with detailed logging
     if (filterBy !== 'all') {
-      const beforeFilterCount = filtered.length;
+      console.log('🔍 Applying filter:', filterBy);
       
       filtered = filtered.filter(set => {
         switch (filterBy) {
-          case 'read': 
-            // A set is considered "read" if ALL its cards are read (isRead === true)
-            const isSetRead = set.cards.length > 0 && set.cards.every(card => card.isRead === true);
-            console.log(`📖 Set "${set.name}" read status:`, isSetRead, 'Cards:', set.cards.map(c => c.isRead));
-            return isSetRead;
-          case 'unread': 
-            // A set is considered "unread" if ANY card is unread (isRead === false)
-            const isSetUnread = set.cards.some(card => card.isRead === false);
-            console.log(`📖 Set "${set.name}" unread status:`, isSetUnread, 'Cards:', set.cards.map(c => c.isRead));
-            return isSetUnread;
+          case 'read': {
+            // A set is "read" if ALL cards are read
+            const allCardsRead = set.cards.length > 0 && set.cards.every(card => card.isRead === true);
+            console.log(`📖 Set "${set.name}" - all cards read:`, allCardsRead, 'Cards:', set.cards.map((c, i) => `${i+1}:${c.isRead}`));
+            return allCardsRead;
+          }
+          case 'unread': {
+            // A set is "unread" if ANY card is unread
+            const hasUnreadCards = set.cards.some(card => card.isRead === false);
+            console.log(`📖 Set "${set.name}" - has unread cards:`, hasUnreadCards, 'Cards:', set.cards.map((c, i) => `${i+1}:${c.isRead}`));
+            return hasUnreadCards;
+          }
           case 'high': return set.priority === 'high';
           case 'medium': return set.priority === 'medium';
           case 'low': return set.priority === 'low';
@@ -181,7 +180,7 @@ export const useFlashcards = () => {
         }
       });
       
-      console.log(`🔍 After ${filterBy} filter: ${filtered.length} sets (was ${beforeFilterCount})`);
+      console.log(`🔍 After ${filterBy} filter:`, filtered.length, 'sets');
     }
 
     // Apply sorting
@@ -203,9 +202,9 @@ export const useFlashcards = () => {
       }
     });
 
-    console.log('🔍 Final filtered and sorted result:', sorted.length, 'sets');
+    console.log('🔍 Final result:', sorted.length, 'sets');
     return sorted;
-  }, [flashcards, searchTerm, filterBy, sortBy, forceUpdate]);
+  }, [flashcards, searchTerm, filterBy, sortBy, updateCounter]);
 
   return {
     flashcards,
@@ -220,6 +219,6 @@ export const useFlashcards = () => {
     addFlashcardSet,
     updateFlashcardSet,
     removeFlashcardSet,
-    triggerForceUpdate,
+    triggerForceUpdate: triggerUpdate,
   };
 };

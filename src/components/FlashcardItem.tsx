@@ -10,7 +10,7 @@ interface FlashcardItemProps {
   answer: string;
   index: number;
   flashcardSetId: string;
-  isRead: boolean; // Now required, not optional
+  isRead: boolean;
 }
 
 export const FlashcardItem: React.FC<FlashcardItemProps> = ({ 
@@ -48,6 +48,7 @@ export const FlashcardItem: React.FC<FlashcardItemProps> = ({
       
       console.log('📖 Updated cards array:', updatedCards.map((c, i) => `Card ${i + 1}: ${c.isRead}`));
       
+      // Force immediate update
       updateFlashcardSet(flashcardSetId, { cards: updatedCards });
       
       toast({
