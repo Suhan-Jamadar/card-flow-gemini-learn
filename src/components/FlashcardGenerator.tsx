@@ -209,10 +209,10 @@ Content: ${content}`
 
       console.log('Flashcard set added successfully');
 
-      // Provide immediate success feedback
+      // Provide immediate success feedback without card count
       toast({
         title: "✅ Flashcards Generated!",
-        description: `Successfully created ${generatedFlashcards.length} flashcards for "${setName}". ${priority === 'high' ? 'Added to High Priority section.' : ''}`,
+        description: `Successfully created flashcards for "${setName}". ${priority === 'high' ? 'Added to High Priority section.' : ''}`,
         action: (
           <Button
             size="sm"
