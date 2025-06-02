@@ -1,8 +1,9 @@
+
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
-// Use a CORS-friendly worker setup
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+// Disable worker to avoid CORS issues
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 export const extractContentFromFile = async (file: File): Promise<string> => {
   const fileType = file.type.toLowerCase();
@@ -39,7 +40,9 @@ const extractPDFContent = async (file: File): Promise<string> => {
     console.log('🔧 Loading PDF document...');
     const pdf = await pdfjsLib.getDocument({ 
       data: arrayBuffer,
-      disableWorker: true // This will disable the worker to avoid CORS issues
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
     }).promise;
     console.log('✅ PDF loaded successfully');
     
