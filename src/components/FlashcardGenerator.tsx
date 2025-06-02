@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useFlashcards } from '@/hooks/useFlashcards';
 import { X, Upload, FileText, Wand2, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { extractContentFromFile } from '@/utils/fileProcessor';
 
 interface FlashcardGeneratorProps {
   onClose: () => void;
@@ -51,7 +52,11 @@ export const FlashcardGenerator: React.FC<FlashcardGeneratorProps> = ({ onClose 
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Create flashcards from the following content. Generate 5-10 flashcards with clear questions and concise answers. Format the response as a JSON array with objects containing "question" and "answer" fields. Make sure the JSON is valid and properly formatted. 
+            text: `Create educational flashcards from the following content. Generate 5-10 flashcards with clear, meaningful questions and concise answers based on the key concepts, facts, and important information in the text. 
+
+IMPORTANT: Focus ONLY on the educational content and concepts within the text. Do NOT create questions about file metadata, document structure, or formatting.
+
+Format the response as a JSON array with objects containing "question" and "answer" fields. Make sure the JSON is valid and properly formatted.
 
 Content: ${content}`
           }]
@@ -115,24 +120,6 @@ Content: ${content}`
     }
   };
 
-  const extractTextFromFile = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        if (text && text.trim()) {
-          resolve(text);
-        } else {
-          reject(new Error('No text content found'));
-        }
-      };
-      
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
-  };
-
   const downloadFlashcards = (flashcards: any[], setName: string) => {
     const dataStr = JSON.stringify(flashcards, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -179,9 +166,19 @@ Content: ${content}`
       let content = textInput.trim();
       
       if (file) {
-        console.log('Extracting text from file:', file.name);
-        content = await extractTextFromFile(file);
+        console.log('Extracting content from file:', file.name);
+        
+        toast({
+          title: "Processing File",
+          description: `Extracting content from ${file.name}...`,
+        });
+        
+        content = await extractContentFromFile(file);
         console.log('Extracted content length:', content.length);
+        
+        if (content.length < 50) {
+          throw new Error('The file content is too short to generate meaningful flashcards. Please ensure the file contains substantial educational content.');
+        }
       }
 
       if (!content) {
